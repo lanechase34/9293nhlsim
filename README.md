@@ -1,2 +1,2 @@
-# 9293nhlsim
-Monte Carlo Simulation of the 92-93 NHL Season using ELO
+# Monte Carlo Simulation of the 92-93 NHL Season using ELO
+
