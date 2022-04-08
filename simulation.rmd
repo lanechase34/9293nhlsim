@@ -8,8 +8,8 @@ output: word_document
 ```{r}
 require(ggplot2)
 require(dplyr)
-require(tidyverse)
 require(stringr)
+library(reactablefmtr)
 ```
 Simulation of the 1992-93 NHL Season
 
@@ -78,6 +78,7 @@ home_win_prob = home_wins / games  # Calculate home win probability where outcom
 hfa = -400*log10(1/home_win_prob - 1)  # Calculate number of Elo points added to home team
 cat("HFA = ", hfa)
 ```
+
 ```{r}
 #Calculate optimal k-value
 
@@ -275,10 +276,8 @@ for(i in 1:iterations) {
       season_stats$points[home_index] = season_stats$points[home_index] + 1
       season_stats$points[away_index] = season_stats$points[away_index] + 1
     }
-
     # Calculate actual margin of victory - must be positive
     score_diff = abs(season_schedule$home_score[j] - season_schedule$away_score[j])   
-  
     # Determine home team result
     if(season_schedule$home_score[j] > season_schedule$away_score[j]) { 
       home_result = 1  # Home team wins
@@ -287,10 +286,9 @@ for(i in 1:iterations) {
     } else { 
       home_result = 0.5  # Tie
     }
-    
     # Calculate amount each team's Elo rating is adjusted by
     home_elo_adjustment = weight * log(score_diff + 1) * (home_result - win_prob)
-  
+
     # Adjust Elo ratings after game has been simulated to get team's new strength
     season_stats$rating[home_index] = season_stats$rating[home_index] + home_elo_adjustment
     season_stats$rating[away_index] = season_stats$rating[away_index] - home_elo_adjustment
@@ -440,6 +438,12 @@ for(i in 1:iterations) {
 summary$average_points = summary$average_points/iterations
 ```
 
+```{r}
+# Saving finished simulation data frame to file for easier use
+write.csv(summary, "summary.csv", row.names=TRUE)
+```
+
+
 
 ```{r}
 #Retrieving season results with residuals
@@ -530,4 +534,94 @@ summary(model)
 #Simulation couldn't handle the sharks
  # histories[order(-histories$`San Jose Sharks`),]
 ```
- 
+
+```{r}
+iterations = 10000
+# Reading in summary csv
+summary <- read.table("summary.csv", header=TRUE, sep=",")
+summary <- subset(summary, select=-c(X))
+# Formatting avg points
+summary$average_points <- round(summary$average_points, 3)
+summary$playoffs <- round( ((summary$playoffs / iterations) * 100), 2)
+summary$make_final <- round( ((summary$conference_championships / iterations) * 100), 2)
+summary$win_cup <- round( ((summary$championships / iterations) * 100), 2)
+# Populating logo icons
+
+summary <- summary %>% mutate(team_logo = case_when(
+  team=="Pittsburgh Penguins" ~
+  "https://content.sportslogos.net/logos/1/24/full/6321_pittsburgh_penguins-primary-2000.png",
+  team=="San Jose Sharks" ~
+  "https://content.sportslogos.net/logos/1/26/full/san_jose_sharks-primary_19921901.png",
+  team=="Toronto Maple Leafs" ~
+  "https://content.sportslogos.net/logos/1/28/full/199.png",
+  team=="Montreal Canadiens" ~
+  "https://content.sportslogos.net/logos/1/16/full/montreal_canadiens_logo_primary_19574050.png",
+  team=="Boston Bruins" ~
+  "https://content.sportslogos.net/logos/1/3/full/228.png",
+  team=="Detroit Red Wings" ~
+  "https://content.sportslogos.net/logos/1/11/full/yo3wysbjtagzmwj37tb11u0fh.png",
+  team=="Buffalo Sabres" ~
+  "https://content.sportslogos.net/logos/1/4/full/28.png",
+  team=="Ottawa Senators" ~
+  "https://content.sportslogos.net/logos/1/21/full/ottawa_senators-primary_19933471.png",
+  team=="Tampa Bay Lightning" ~
+  "https://content.sportslogos.net/logos/1/27/full/tampa_bay_lightning_logo_primary_19939887.png",
+  team=="New York Rangers" ~
+  "https://content.sportslogos.net/logos/1/20/full/9612_new_york_rangers-primary-19791.png",
+  team=="Philadelphia Flyers" ~
+  "https://content.sportslogos.net/logos/1/22/full/4659_philadelphia_flyers-primary-1968.png",
+  team=="New York Islanders" ~
+  "https://content.sportslogos.net/logos/1/19/full/259.png",
+  team=="Washington Capitals" ~
+  "https://content.sportslogos.net/logos/1/30/full/washington_capitals-primary_19755453.png",
+  team=="New Jersey Devils" ~
+  "https://content.sportslogos.net/logos/1/18/full/127.png",
+  team=="Hartford Whalers" ~
+  "https://content.sportslogos.net/logos/1/32/full/clzty1tgf8glzas62fq6fyphr.png",
+  team=="Chicago Blackhawks" ~
+  "https://content.sportslogos.net/logos/1/7/full/4191_chicago_blackhawks-primary-1987.png",
+  team=="Minnesota North Stars" ~
+  "https://content.sportslogos.net/logos/1/34/full/phyt5a8iygbqgox2dopwh6orm.png",
+  team=="St. Louis Blues" ~
+  "https://content.sportslogos.net/logos/1/25/full/glxp9zgg8q7mryq3pdpg07i3g.png",
+  team=="Quebec Nordiques" ~
+  "https://content.sportslogos.net/logos/1/33/full/270.png",
+  team=="Los Angeles Kings" ~
+  "https://content.sportslogos.net/logos/1/14/full/242.png",
+  team=="Vancouver Canucks" ~
+  "https://content.sportslogos.net/logos/1/29/full/0a72moxnup3kd6lgrz260u86i.png",
+  team=="Calgary Flames"~
+  "https://content.sportslogos.net/logos/1/5/full/231.png",
+  team=="Winnipeg Jets" ~
+  "https://content.sportslogos.net/logos/1/37/full/dhhc15gfgtog1qo5b5uwpz8h0.png",
+  team=="Edmonton Oilers" ~
+  "https://content.sportslogos.net/logos/1/12/full/2230_edmonton_oilers-primary-1987.png"
+))
+# Cleaning up data frame to select only columns needed and necessary order
+summary <- summary %>% select(team_logo, team, average_points, playoffs, make_final, win_cup)
+```
+
+
+
+
+```{r}
+# Creating Table of expected win % at end of season
+table <- reactable(summary, theme=fivethirtyeight(centered=TRUE, header_font_size=11),
+          searchable=TRUE,language=reactableLang(searchPlaceholder="SEARCH FOR A TEAM..."),
+          columns=list(
+            team_logo=colDef(show=TRUE,maxWidth=40,name="", sortable=FALSE, cell=embed_img(summary, height="50", width="40")),
+            team=colDef(show=TRUE, align="center", style = list(borderRight = "1px solid #777")),
+            average_points=colDef(show=TRUE,name="AVG Points"),
+            playoffs=colDef(show=TRUE,name="Make Playoffs",
+            style=color_scales(summary,colors=c("white","#A3A3FF","#4949FF"))),
+            make_final=colDef(show=TRUE,name="Make Cup Final",style=color_scales(summary,colors=c("white","#A3A3FF","#4949FF"))),
+            win_cup=colDef(show=TRUE,name="Win Stanley Cup",style=color_scales(summary,colors=c("white","#A3A3FF","#4949FF")))
+          )) %>% add_title('92-93 NHL Simulation', align="center")
+table
+```
+
+```{r}
+# Saving table made above
+save_reactable_test(table, "output/summary.png")
+save_reactable_test(table, "output/output.html")
+```
